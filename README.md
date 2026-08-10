@@ -73,7 +73,7 @@ error-journal crawler
 Error Journal uses SQLite and creates a database named:
 
 ```text
-finns_vault.db
+finns_house.db
 ```
 
 The database contains the stored error information, including:
