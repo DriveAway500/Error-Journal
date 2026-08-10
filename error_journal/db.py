@@ -4,6 +4,7 @@ import os
 
 DB_NAME = "finns_house.db"
 db_path = None
+_db_initialized = False
 
 def save_path(path: str):
     global db_path
@@ -26,6 +27,7 @@ def set_db_path(path: str):
     global db_path
     db_path = clean_path
     save_path(clean_path)
+    init_db()
 
 
 def get_db_path():
@@ -45,7 +47,11 @@ def get_db_file():
 
 
 def init_db():
-    """Creates the errors table if it does not already exist."""
+    """Creates the errors table and indexes if they do not exist."""
+    global _db_initialized
+    if _db_initialized:
+        return
+
     with sqlite3.connect(get_db_file()) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -56,11 +62,14 @@ def init_db():
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_identifier ON errors(identifier)
+        """)
+    _db_initialized = True
 
 
 def insert_error(identifier: str, error_message: str):
     """Inserts an error using the provided identifier."""
-    init_db()
     with sqlite3.connect(get_db_file()) as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -69,9 +78,8 @@ def insert_error(identifier: str, error_message: str):
         )
 
 
-def get_errors_by_identifier(identifier: str):
-    """Returns all errors registered under the given identifier."""
-    init_db()
+def get_errors_by_identifier(identifier: str, limit: int = 100):
+    """Returns errors registered under the given identifier (with limit option)."""
     with sqlite3.connect(get_db_file()) as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -80,7 +88,23 @@ def get_errors_by_identifier(identifier: str):
             FROM errors
             WHERE identifier = ?
             ORDER BY id ASC
+            LIMIT ?
             """,
-            (identifier,),
+            (identifier, limit),
+        )
+        return cursor.fetchall()
+
+
+def get_identifiers_with_counts():
+    """Returns all identifiers along with the total number of errors registered for each."""
+    with sqlite3.connect(get_db_file()) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT identifier, COUNT(*) as total_errors
+            FROM errors
+            GROUP BY identifier
+            ORDER BY identifier ASC
+            """
         )
         return cursor.fetchall()

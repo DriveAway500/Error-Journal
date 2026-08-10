@@ -14,7 +14,9 @@ authors = [
     { name = "WhaleHook" }
 ]
 
-dependencies = []
+dependencies = [
+    "colorama>=0.4.6"
+]
 
 [project.scripts]
 error-journal = "error_journal.cli:main"
